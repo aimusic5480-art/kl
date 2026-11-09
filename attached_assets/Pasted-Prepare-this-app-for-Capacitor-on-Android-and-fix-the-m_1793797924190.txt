@@ -1,0 +1,11 @@
+Prepare this app for Capacitor on Android and fix the map for the Android WebView. Do all of the items below and nothing else. Do NOT run "npx cap add android" and do not create an android folder (I do that on my computer).
+
+1) package.json: add dependencies "@capacitor/android": "^8.6.0" and devDependency "@capacitor/cli": "^8.6.0" (match the existing @capacitor/core version). Add scripts "cap:sync": "npm run build && npx cap sync android".
+2) Create capacitor.config.ts: appId 'com.twende.client', appName 'Aletwende', webDir 'dist', android: { allowMixedContent: true }.
+3) Polyfills for old WebViews: create src/polyfills.ts that defines, only when missing, Object.hasOwn, Array/String/typed-array .at, Array.prototype.findLast and findLastIndex, and structuredClone (simple fallback). Make "import './polyfills';" the first line of src/main.tsx. Create src/maplibre-worker.ts containing exactly: import './polyfills'; then import 'maplibre-gl/dist/maplibre-gl-worker.mjs'; and in src/components/MapLibreMap.tsx import the worker url from '../maplibre-worker?worker&url'.
+4) Map source: remove the OpenStreetMap raster style and use style: 'https://tiles.openfreemap.org/styles/liberty'. Keep markers and the polyline layers. Add the small attribution text "© OpenFreeMap © OpenMapTiles Data from OpenStreetMap" bottom-left.
+5) Temporary map debug box (SHOW_MAP_DEBUG = true flag): show the map error text, WebGL yes/no (check with a canvas getContext, NOT maplibregl.supported() which does not exist in v6), "Map did not load" after 8 s, a worker test (new Worker(url) with onerror), the HTTP status of fetch('https://tiles.openfreemap.org/styles/liberty'), and counters for styledata/sourcedata/idle events.
+6) src/App.tsx: replace the second <SplashScreen onComplete={() => undefined} /> (inside the isActiveOrderLoading check, ~line 99) with <div className="fixed inset-0 z-[9999] bg-black" /> so the splash video is mounted once.
+7) Make the first-touch audio unlock silent (src/contexts/CallContext.tsx and src/utils/notificationSound.ts): set audio.muted = true before play(), and after pause() set currentTime = 0 and muted = false. Skip the unlock when isNative() is true.
+8) src/pages/Shop.tsx and any other <img src={store.logo}>: add onError that hides the image and shows the existing 🏪 placeholder.
+Return a short list of the files you changed.

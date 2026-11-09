@@ -1,0 +1,12 @@
+Fixes in the client app. Do only these.
+
+1) SELECT RIDE opens halfway. src/pages/SelectRide.tsx: its bottom panel must do the same as Dashboard/FoodDelivery/LiveTracking: pass openToHeight (about 50% of window.innerHeight, clamped to the panel min/max) so it mounts at minHeight and after 350 ms springs up to half the screen, every time the page loads. The user can still drag it.
+
+2) LOCATION asks immediately when the Android app opens (like the Bolt web version, which shows the system permission dialog). In the native app the web geolocation prompt does not appear unless Android location permission was granted first.
+   - In src/contexts/LocationContext.tsx when isNative() is true: on mount, before the first getCurrentPosition, call the Capacitor plugin to request permission. Add @capacitor/geolocation (npm i @capacitor/geolocation), then `const st = await Geolocation.checkPermissions(); if (st.location !== 'granted') await Geolocation.requestPermissions({ permissions: ['location'] });` and only then start navigator.geolocation (keep the existing code after that). Also re-run this when the app returns to the foreground (App appStateChange isActive) if permission is not granted.
+   - src/components/LocationGate.tsx: when native and permission is not granted, the "Enable" button must call the same Geolocation.requestPermissions(); if the result is 'denied' twice, show the existing blocked help with a button that opens the app settings (use openCallSettings('app') from src/native/calls.ts).
+   - Web behaviour stays exactly as now.
+
+3) RESTORE STATE after the app is closed / logout-login / phone restart. On start (after auth) read the rider's current trip/order from Firestore (orders where userId = this user and status not in completed/cancelled/rated) and route to the page that matches its status (searching -> searching page, accepted/arrived -> live tracking, started -> live tracking trip in progress, delivery statuses -> FoodDelivery tracking, completed and not rated -> rating). Use a one-time effect with onSnapshot; no in-memory flag. If there is no active order, stay on the Dashboard.
+
+4) Do not change anything else. Return the full zip (without node_modules, dist, android).
